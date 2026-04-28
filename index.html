@@ -1,0 +1,1177 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>FinOps on Azure — Arxus Workshop</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.0/dist/mermaid.min.js"></script>
+<style>
+  :root{
+    --bg:#1a0d23;
+    --bg-2:#241432;
+    --card:#2d1b3d;
+    --card-2:#3a2350;
+    --line:rgba(245,242,237,0.10);
+    --text:#f5f2ed;
+    --muted:rgba(245,242,237,0.62);
+    --dim:rgba(245,242,237,0.40);
+    --red:#ef1506;
+    --red-deep:#a50014;
+    --orange:#e5640c;
+    --orange-2:#e94209;
+    --grad:linear-gradient(135deg,#a50014 0%,#ef1506 45%,#e94209 75%,#e5640c 100%);
+    --grad-soft:linear-gradient(135deg,rgba(165,0,20,.18),rgba(229,100,12,.14));
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0;background:var(--bg);color:var(--text);font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;font-feature-settings:"ss01","cv11";overflow:hidden}
+  body{
+    background:
+      radial-gradient(1200px 600px at 80% -10%, rgba(239,21,6,.08), transparent 60%),
+      radial-gradient(900px 600px at -10% 110%, rgba(229,100,12,.06), transparent 60%),
+      var(--bg);
+  }
+
+  /* Decorative curved line evoking arxus.eu hero */
+  .curve{
+    position:fixed; inset:0; pointer-events:none; z-index:0;
+    background:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1920 1080'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%23a50014'/><stop offset='.5' stop-color='%23ef1506'/><stop offset='1' stop-color='%23e5640c'/></linearGradient></defs><path d='M -50 130 C 480 30, 1500 60, 1980 380 S 1700 1080, 200 980' fill='none' stroke='url(%23g)' stroke-width='2.5' opacity='.55'/></svg>") center/cover no-repeat;
+    opacity:.65;
+  }
+
+  /* Slide framework */
+  .deck{position:relative;height:100vh;width:100vw;overflow:hidden;z-index:1}
+  .slide{
+    position:absolute; inset:0;
+    display:flex; flex-direction:column;
+    padding:72px 96px 88px 96px;
+    opacity:0; pointer-events:none; transform:translateY(8px);
+    transition:opacity .35s ease, transform .35s ease;
+  }
+  .slide.active{opacity:1;pointer-events:auto;transform:none}
+
+  /* Top bar */
+  .topbar{
+    position:fixed; top:0; left:0; right:0; height:56px;
+    display:flex; align-items:center; justify-content:space-between;
+    padding:0 32px;
+    z-index:10;
+    background:linear-gradient(180deg,rgba(26,13,35,.85),rgba(26,13,35,0));
+  }
+  .brand{display:flex;align-items:center;gap:12px}
+  .brand svg{height:30px;width:auto}
+  .brand .wordmark{font-weight:800;letter-spacing:-.01em;font-size:18px}
+  .topbar .meta{font-size:12px;color:var(--muted);letter-spacing:.04em;text-transform:uppercase}
+
+  /* Bottom bar */
+  .bottombar{
+    position:fixed; bottom:0; left:0; right:0; height:48px;
+    display:flex; align-items:center; justify-content:space-between;
+    padding:0 32px;
+    color:var(--dim); font-size:12px; letter-spacing:.04em;
+    z-index:10;
+    background:linear-gradient(0deg,rgba(26,13,35,.85),rgba(26,13,35,0));
+  }
+  .progress{flex:1;margin:0 24px;height:2px;background:rgba(255,255,255,.06);position:relative;border-radius:2px;overflow:hidden}
+  .progress > span{position:absolute;left:0;top:0;bottom:0;background:var(--grad);transition:width .35s ease}
+
+  /* Typography */
+  .eyebrow{
+    display:inline-block; font-size:12px; letter-spacing:.18em; text-transform:uppercase;
+    color:var(--orange); font-weight:600; margin-bottom:14px;
+  }
+  h1.title{font-size:88px;line-height:1.02;font-weight:900;letter-spacing:-.025em;margin:0 0 24px}
+  h1.title .accent{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+  h2.headline{font-size:54px;line-height:1.05;font-weight:800;letter-spacing:-.02em;margin:0 0 18px}
+  h2.headline .accent{color:var(--orange)}
+  h3{font-size:22px;font-weight:700;margin:0 0 8px;letter-spacing:-.01em}
+  p.lead{font-size:22px;line-height:1.45;color:var(--muted);max-width:1100px;margin:0 0 18px}
+  p{font-size:18px;line-height:1.55;color:var(--muted);margin:0 0 12px}
+  .kicker{font-size:14px;color:var(--orange);font-weight:600;letter-spacing:.06em;text-transform:uppercase;margin-bottom:8px}
+
+  /* Layout helpers */
+  .row{display:flex;gap:32px;align-items:stretch}
+  .col{flex:1;min-width:0}
+  .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:28px}
+  .grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:24px}
+  .grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:20px}
+  .center{display:flex;align-items:center;justify-content:center;height:100%}
+  .stretch{flex:1;display:flex;flex-direction:column;justify-content:center}
+  .footnote{font-size:13px;color:var(--dim);margin-top:auto;padding-top:16px;border-top:1px solid var(--line)}
+
+  /* Cards */
+  .card{
+    background:var(--card); border:1px solid var(--line); border-radius:14px;
+    padding:24px; position:relative; overflow:hidden;
+  }
+  .card.accent::before{
+    content:""; position:absolute; left:0; top:0; bottom:0; width:4px; background:var(--grad);
+  }
+  .card h3{display:flex;align-items:center;gap:10px}
+  .card .num{
+    display:inline-flex;align-items:center;justify-content:center;
+    width:28px;height:28px;border-radius:8px;background:var(--grad);color:#fff;
+    font-weight:800;font-size:13px;
+  }
+  .pill{display:inline-block;padding:4px 10px;border-radius:999px;background:rgba(229,100,12,.12);color:var(--orange);font-size:12px;font-weight:600;letter-spacing:.04em}
+  .pill.red{background:rgba(239,21,6,.14);color:#ff6a4a}
+  .pill.green{background:rgba(80,200,120,.10);color:#7be0a8}
+  .pill.dim{background:rgba(255,255,255,.06);color:var(--muted)}
+
+  /* Tables */
+  table{width:100%;border-collapse:collapse;font-size:15px}
+  th,td{text-align:left;padding:11px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{color:var(--orange);font-weight:600;font-size:12px;letter-spacing:.08em;text-transform:uppercase}
+  td{color:var(--text)}
+  td.mute{color:var(--muted)}
+  tr:last-child td{border-bottom:none}
+  table.compact td, table.compact th{padding:8px 12px;font-size:14px}
+
+  /* Lists */
+  ul.clean{list-style:none;padding:0;margin:0}
+  ul.clean li{padding:10px 0;border-bottom:1px solid var(--line);display:flex;gap:14px;font-size:17px;color:var(--text)}
+  ul.clean li:last-child{border-bottom:none}
+  ul.clean li .marker{
+    flex:0 0 28px;height:28px;border-radius:8px;background:var(--grad-soft);color:var(--orange);
+    display:inline-flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;
+    border:1px solid rgba(229,100,12,.25);
+  }
+  ul.bullets{padding-left:18px;margin:0}
+  ul.bullets li{font-size:17px;color:var(--text);margin-bottom:8px;line-height:1.5}
+  ul.bullets li::marker{color:var(--orange)}
+
+  /* Mermaid container */
+  .diagram{
+    background:var(--card); border:1px solid var(--line); border-radius:14px;
+    padding:18px; flex:1; display:flex; align-items:center; justify-content:center;
+    overflow:hidden;
+  }
+  .diagram .mermaid{width:100%}
+  .mermaid svg{max-width:100%;max-height:100%;height:auto !important}
+
+  /* Code-ish */
+  code{font-family:'JetBrains Mono',monospace;font-size:13px;background:rgba(255,255,255,.06);padding:2px 6px;border-radius:4px;color:#ffd9c8}
+
+  /* Title slide */
+  .slide.cover{padding:0}
+  .cover-inner{flex:1;display:flex;flex-direction:column;justify-content:center;padding:0 96px;position:relative}
+  .cover-inner::before{
+    content:""; position:absolute; left:96px; top:50%; width:80px; height:4px; background:var(--grad); border-radius:2px; transform:translateY(-90px);
+  }
+  .cover-meta{margin-top:36px;display:flex;gap:32px;color:var(--muted);font-size:15px}
+  .cover-meta strong{color:var(--text);font-weight:600}
+
+  /* Big stat */
+  .stat{
+    display:flex;flex-direction:column;justify-content:center;
+    background:var(--card);border:1px solid var(--line);border-radius:14px;padding:28px;
+    position:relative; overflow:hidden;
+  }
+  .stat::before{
+    content:""; position:absolute; left:0; top:0; bottom:0; width:3px;
+    background:linear-gradient(180deg, #e5640c, #f5a36b);
+    opacity:.6;
+  }
+  .stat .num{
+    font-size:64px;font-weight:800;letter-spacing:-.03em;line-height:1;
+    color:#f5a36b;
+  }
+  .stat .label{color:var(--muted);font-size:15px;margin-top:10px;line-height:1.45}
+
+  /* Speaker hint */
+  .hint{
+    display:flex;gap:10px;margin-top:14px;padding:12px 14px;background:rgba(229,100,12,.06);border:1px solid rgba(229,100,12,.18);border-radius:10px;color:var(--text);font-size:14px;
+  }
+  .hint::before{content:"💬";flex:0 0 auto}
+
+  /* Print: render slides as pages */
+  @media print{
+    body, html { background:white; }
+    .curve, .topbar, .bottombar { display:none !important }
+    .deck { height:auto; overflow:visible }
+    .slide{position:relative;opacity:1;pointer-events:auto;transform:none;height:auto;min-height:100vh;page-break-after:always;color:#111;background:#fff}
+    .slide *{color:#111 !important}
+    h1.title .accent, h2.headline .accent, .stat .num{ -webkit-text-fill-color: initial; color:#c0210b !important }
+  }
+
+  .nav-hint{position:fixed;bottom:60px;right:24px;font-size:11px;color:var(--dim);letter-spacing:.08em;text-transform:uppercase;z-index:10}
+
+  /* Maturity ladder */
+  .ladder{
+    flex:1; display:flex; align-items:center; justify-content:center; gap:18px;
+    padding:24px 0;
+  }
+  .step{
+    flex:1; max-width:280px; min-height:280px;
+    background:var(--card); border:1px solid var(--line); border-radius:16px;
+    padding:26px 24px; display:flex; flex-direction:column; gap:18px;
+    position:relative; transition:transform .2s ease;
+  }
+  .step.here{
+    background:linear-gradient(180deg, rgba(239,21,6,.10), rgba(229,100,12,.04)), var(--card);
+    border:2px solid transparent;
+    background-clip:padding-box;
+    box-shadow:0 0 0 2px transparent, 0 20px 60px -20px rgba(239,21,6,.45);
+    position:relative;
+  }
+  .step.here::before{
+    content:""; position:absolute; inset:-2px; border-radius:16px; padding:2px;
+    background:var(--grad);
+    -webkit-mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite:xor; mask-composite:exclude;
+    pointer-events:none;
+  }
+  .step.goal{
+    border:1px solid rgba(123,224,168,.30);
+    background:linear-gradient(180deg, rgba(123,224,168,.06), transparent), var(--card);
+  }
+  .step-head{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+  .step-num{
+    font-size:14px; font-weight:800; letter-spacing:.06em;
+    background:var(--grad); -webkit-background-clip:text; background-clip:text; color:transparent;
+  }
+  .step.goal .step-num{background:linear-gradient(135deg,#7be0a8,#3da874);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .step-name{font-size:28px; font-weight:800; letter-spacing:-.01em; color:var(--text)}
+  .here-badge{
+    margin-left:auto; font-size:10px; font-weight:700; letter-spacing:.12em; text-transform:uppercase;
+    padding:5px 9px; border-radius:999px; background:var(--grad); color:#fff;
+    box-shadow:0 4px 14px -4px rgba(239,21,6,.6);
+  }
+  .step-list{list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:10px}
+  .step-list li{
+    font-size:15px; color:var(--muted); line-height:1.4; padding-left:18px; position:relative;
+  }
+  .step-list li::before{
+    content:""; position:absolute; left:0; top:9px; width:8px; height:2px; background:var(--orange); border-radius:1px;
+  }
+  .step.goal .step-list li::before{background:#7be0a8}
+  .step-arrow{
+    font-size:32px; color:var(--orange); opacity:.55; font-weight:300; user-select:none;
+  }
+
+  /* FOCUS columns slide */
+  .cost-flavors{
+    background:linear-gradient(180deg, rgba(239,21,6,.10), rgba(229,100,12,.04)), var(--card);
+    border:1px solid rgba(239,21,6,.30);
+    border-radius:16px; padding:24px 28px; margin-top:8px;
+    position:relative; overflow:hidden;
+  }
+  .cost-flavors::before{
+    content:""; position:absolute; left:0; top:0; bottom:0; width:4px; background:var(--grad);
+  }
+  .cf-head{display:flex;align-items:center;gap:14px;margin-bottom:16px}
+  .cf-label{
+    font-size:13px; font-weight:800; letter-spacing:.18em; text-transform:uppercase;
+    background:var(--grad); -webkit-background-clip:text; background-clip:text; color:transparent;
+  }
+  .cf-tag{font-size:13px; color:var(--muted)}
+  .cf-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+  .cf-card{
+    background:rgba(26,13,35,.6); border:1px solid var(--line); border-radius:12px;
+    padding:18px 18px 16px; display:flex; flex-direction:column; gap:6px;
+  }
+  .cf-name{font-family:'JetBrains Mono',monospace;font-size:18px;font-weight:600;color:var(--text);letter-spacing:-.01em}
+  .cf-desc{font-size:14px;color:var(--muted)}
+  .cf-use{
+    margin-top:8px; padding-top:10px; border-top:1px solid var(--line);
+    font-size:12px; color:var(--orange); font-weight:600; letter-spacing:.04em;
+  }
+
+  .col-groups{
+    display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-top:20px;flex:1;align-content:start;
+  }
+  .col-group{
+    background:var(--card); border:1px solid var(--line); border-radius:12px;
+    padding:16px 16px 14px; display:flex; flex-direction:column; gap:10px;
+  }
+  .cg-title{
+    font-size:12px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:var(--orange);
+  }
+  .cg-chips{display:flex;flex-direction:column;gap:6px}
+  .cg-chips span{
+    font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--text);
+    background:rgba(255,255,255,.04); border:1px solid var(--line);
+    padding:5px 9px; border-radius:6px;
+  }
+
+  /* Architecture diagram */
+  .arch{
+    flex:1; display:grid; grid-template-columns: 1fr auto 1fr auto 1fr; gap:18px;
+    align-items:center; padding:20px 0;
+  }
+  .arch-stage{
+    display:flex; flex-direction:column; gap:14px;
+    background:var(--card); border:1px solid var(--line); border-radius:16px;
+    padding:22px 20px;
+  }
+  .arch-stage-label{
+    font-size:11px; font-weight:700; letter-spacing:.18em; text-transform:uppercase;
+    color:var(--orange); margin-bottom:4px;
+  }
+  .arch-card{
+    background:rgba(26,13,35,.55); border:1px solid var(--line); border-radius:12px;
+    padding:14px 16px; display:flex; flex-direction:column; gap:3px;
+  }
+  .arch-card-icon{font-size:18px;margin-bottom:4px}
+  .arch-card-name{font-size:15px;font-weight:700;color:var(--text);letter-spacing:-.01em}
+  .arch-card-meta{font-size:12px;color:var(--muted)}
+  .arch-card.src{border-left:3px solid var(--orange)}
+  .arch-card.pipe{border:1px solid rgba(239,21,6,.30); background:linear-gradient(180deg, rgba(239,21,6,.08), transparent), rgba(26,13,35,.55)}
+  .arch-card.pipe.featured{
+    border:1px solid transparent; position:relative;
+    background:linear-gradient(180deg, rgba(239,21,6,.12), rgba(229,100,12,.04)), rgba(26,13,35,.6);
+  }
+  .arch-card.pipe.featured::before{
+    content:""; position:absolute; inset:-1px; border-radius:12px; padding:1px;
+    background:var(--grad);
+    -webkit-mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite:xor; mask-composite:exclude;
+    pointer-events:none;
+  }
+  .arch-card.out{border-left:3px solid #7be0a8}
+  .arch-connector{display:flex;align-items:center;justify-content:center}
+  .arch-arrow{
+    font-size:36px; font-weight:300; color:var(--orange); user-select:none;
+  }
+  .arch-flow{
+    text-align:center; color:var(--orange); opacity:.5; font-size:18px; font-weight:300;
+    margin:-4px 0; user-select:none;
+  }
+
+  /* Tag strategy steps */
+  .tag-steps{
+    display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-top:6px;
+  }
+  .tag-step{
+    background:var(--card); border:1px solid var(--line); border-radius:12px;
+    padding:16px 18px; display:flex; gap:14px; align-items:flex-start;
+    position:relative;
+  }
+  .tag-step.featured{
+    background:linear-gradient(180deg, rgba(229,100,12,.10), rgba(229,100,12,.02)), var(--card);
+    border:1px solid rgba(229,100,12,.35);
+  }
+  .ts-num{
+    flex:0 0 32px; height:32px; border-radius:8px;
+    background:linear-gradient(135deg,#e5640c,#f5a36b);
+    color:#1a0d23; font-weight:800; font-size:14px;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .tag-step.featured .ts-num{
+    background:var(--grad); color:#fff;
+  }
+  .ts-body{flex:1; min-width:0}
+  .ts-title{font-size:15px; font-weight:700; color:var(--text); margin-bottom:4px; letter-spacing:-.01em}
+  .ts-desc{font-size:13px; color:var(--muted); line-height:1.5}
+  .ts-desc code{font-size:11px; padding:1px 5px}
+  .ts-note{color:#7be0a8; font-style:italic}
+
+  /* Join visualisation */
+  .join-viz{
+    display:grid; grid-template-columns: 1.1fr auto 1.6fr auto 1.1fr; gap:18px;
+    align-items:center; padding:14px 0;
+  }
+  .join-col{display:flex;flex-direction:column;gap:12px;min-width:0;align-self:stretch}
+  .join-col.wide{justify-content:flex-start}
+  .join-label{
+    font-size:11px; font-weight:700; letter-spacing:.18em; text-transform:uppercase;
+    color:var(--orange);
+  }
+  .join-op{
+    align-self:center;
+    font-size:54px; font-weight:300; color:var(--orange); opacity:.55;
+    user-select:none; line-height:1;
+  }
+  .join-caption{font-size:13px;color:var(--muted);line-height:1.45}
+  .join-caption em{color:var(--text);font-style:italic}
+  .join-caption strong{color:#f5a36b}
+
+  .entity{
+    background:var(--card); border:1px solid var(--line); border-radius:10px;
+    overflow:hidden;
+  }
+  .entity.primary{
+    border:1px solid rgba(229,100,12,.35);
+    background:linear-gradient(180deg, rgba(229,100,12,.08), transparent), var(--card);
+  }
+  .entity-head{
+    font-family:'JetBrains Mono',monospace; font-size:14px; font-weight:600;
+    color:var(--text); padding:12px 14px;
+    border-bottom:1px solid var(--line);
+    background:rgba(255,255,255,.02);
+    display:flex; align-items:baseline; gap:10px; flex-wrap:wrap;
+  }
+  .entity.primary .entity-head{
+    background:linear-gradient(135deg, rgba(229,100,12,.18), rgba(229,100,12,.04));
+    color:#f5a36b;
+  }
+  .entity-head.sm{font-size:13px;padding:10px 12px}
+  .entity-src{
+    font-family:'Inter',sans-serif; font-size:10px; font-weight:600;
+    letter-spacing:.08em; text-transform:uppercase;
+    color:var(--muted); margin-left:auto;
+  }
+  .entity-fields{list-style:none;padding:6px 0;margin:0}
+  .entity-fields li{
+    display:flex; justify-content:space-between; gap:10px;
+    padding:5px 14px; font-size:12px; line-height:1.3;
+    border-bottom:1px solid rgba(255,255,255,.03);
+  }
+  .entity-fields li:last-child{border-bottom:none}
+  .ef-name{font-family:'JetBrains Mono',monospace; color:var(--text)}
+  .ef-type{font-family:'JetBrains Mono',monospace; color:var(--dim); font-size:11px}
+
+  .entity-grid{
+    display:grid; grid-template-columns:1fr 1fr; gap:10px;
+  }
+
+  .decision-card{
+    background:linear-gradient(135deg, rgba(123,224,168,.08), rgba(123,224,168,.02)), var(--card);
+    border:1px solid rgba(123,224,168,.25);
+    border-radius:10px; padding:12px 14px;
+    display:flex; flex-direction:column; gap:4px;
+  }
+  .dc-amount{
+    font-size:22px; font-weight:800; color:#7be0a8; letter-spacing:-.02em; line-height:1;
+  }
+  .dc-amount span{font-size:13px;font-weight:600;color:rgba(123,224,168,.7);margin-left:2px}
+  .dc-text{font-size:12px;color:var(--muted);line-height:1.4}
+  .dc-action{font-size:11px;font-weight:700;letter-spacing:.06em;color:#7be0a8;margin-top:2px}
+
+  /* Demo slide */
+  .demo-slide{
+    flex:1; display:flex; align-items:center; justify-content:center;
+  }
+  .demo-slide .title{font-size:160px;letter-spacing:-.04em;margin:0}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <!-- Arxus logo (icon only) -->
+    <svg viewBox="0 0 1000 1217.402" xmlns="http://www.w3.org/2000/svg" aria-label="Arxus">
+      <defs>
+        <linearGradient id="ag1" x1="306.55" y1="48.8" x2="851.22" y2="1224.8" gradientUnits="userSpaceOnUse">
+          <stop offset="0" stop-color="#a50014"/><stop offset=".5" stop-color="#ef1506"/><stop offset="1" stop-color="#e5640c"/>
+        </linearGradient>
+        <linearGradient id="ag2" x1="0" y1="980" x2="200" y2="1200" gradientUnits="userSpaceOnUse">
+          <stop offset="0" stop-color="#a50014"/><stop offset=".5" stop-color="#ef1506"/><stop offset="1" stop-color="#e5640c"/>
+        </linearGradient>
+      </defs>
+      <path fill="url(#ag1)" d="M982.55 1078.24c-43.32-343.53-127.25-626.9-272.34-870.24C530.19-94.94 289.59-29.24 277.95 157.97c-4.78 76.87 52.34 133.15 109.4 184.89 164.98 149.56 361.48 379.64 402.17 596.66 10.04 53.56-71.98-13.39-145.63-46.87-105.97-48.17-306.89-112.27-294.6-20.09 3.35 25.11 91.94 58.59 154.83 103.78 86.2 61.93 154.41 119.54 245.22 193.33 113.04 91.84 245.19 41.66 233.2-92.43z"/>
+      <path fill="url(#ag2)" d="M182.36 964.93c32.97 20.18 7.46 164.08-21.41 211.25-28.87 47.17-88.52 43.67-118.66 27.28C9.1 1185.42-16.28 1132.56 12.59 1085.38c30.52-49.87 136.32-140.93 169.77-120.45z"/>
+    </svg>
+    <span class="wordmark">Arxus</span>
+  </div>
+  <div class="meta">FinOps on Azure · Workshop · 2026-04-29</div>
+</header>
+
+<div class="deck" id="deck">
+
+  <!-- 1. COVER -->
+  <section class="slide cover active">
+    <div class="cover-inner stretch">
+      <h1 class="title"><span class="accent">FinOps</span> on Azure</h1>
+    </div>
+  </section>
+
+  <!-- 2. AGENDA -->
+  <section class="slide">
+    <div class="eyebrow">Agenda</div>
+    <h2 class="headline">What we'll cover today</h2>
+    <ul class="clean" style="max-width:980px">
+      <li><span class="marker">1</span><div><strong>Where you are vs. where this can go.</strong> The FinOps maturity ladder.</div></li>
+      <li><span class="marker">2</span><div><strong>The data foundation.</strong> FOCUS, and why your current export is underused.</div></li>
+      <li><span class="marker">3</span><div><strong>Microsoft FinOps Toolkit.</strong> What it gives you, where it stops.</div></li>
+      <li><span class="marker">4</span><div><strong>Tagging strategy.</strong> Taxonomy, enforcement, coverage as a KPI.</div></li>
+      <li><span class="marker">5</span><div><strong>Enrichment.</strong> Resource Graph, Reservations, Advisor, Azure REST APIs.</div></li>
+      <li><span class="marker">6</span><div><strong>Operational gotchas.</strong></div></li>
+      <li><span class="marker">7</span><div><strong>Demo and next steps.</strong></div></li>
+    </ul>
+  </section>
+
+  <!-- 3. WHERE YOU ARE -->
+  <section class="slide">
+    <div class="eyebrow">Framing</div>
+    <h2 class="headline">Where are we now?</h2>
+    <div class="grid-2" style="margin-top:24px">
+      <div class="card">
+        <h3><span class="pill green">What you have</span></h3>
+        <ul class="bullets">
+          <li>FOCUS export configured in Cost Management. Daily, vendor-agnostic.</li>
+          <li>Power BI dashboard: cost over time, cost by subscription</li>
+          <li>A growing Azure footprint. Volume is real.</li>
+        </ul>
+        <p style="margin-top:14px">In FinOps Framework terms: <strong>Phase 1 (Inform).</strong> Solidly there.</p>
+      </div>
+      <div class="card">
+        <h3><span class="pill red">What you don't have yet</span></h3>
+        <ul class="bullets">
+          <li>Allocation. Who actually owns each €?</li>
+          <li>Optimisation signal. What should we change next?</li>
+          <li>Forward view. Anomalies, forecasts, retirements.</li>
+          <li>Engineer self-service. The people who can act on cost can't see it.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4. MATURITY LADDER -->
+  <section class="slide">
+    <div class="eyebrow">The arc</div>
+    <h2 class="headline">The FinOps maturity ladder</h2>
+    <div class="ladder">
+      <div class="step here">
+        <div class="step-head">
+          <div class="step-num">L1</div>
+          <div class="step-name">Inform</div>
+          <span class="here-badge">You are here</span>
+        </div>
+        <ul class="step-list">
+          <li>FOCUS export · Power BI</li>
+          <li>Cost over time</li>
+          <li>Cost by subscription</li>
+        </ul>
+      </div>
+      <div class="step-arrow">→</div>
+      <div class="step">
+        <div class="step-head">
+          <div class="step-num">L2</div>
+          <div class="step-name">Allocate</div>
+        </div>
+        <ul class="step-list">
+          <li>Tag-driven chargeback</li>
+          <li>Tag coverage as a KPI</li>
+          <li>FinOps Hub deployed</li>
+        </ul>
+      </div>
+      <div class="step-arrow">→</div>
+      <div class="step">
+        <div class="step-head">
+          <div class="step-num">L3</div>
+          <div class="step-name">Optimize</div>
+        </div>
+        <ul class="step-list">
+          <li>Joined with live config</li>
+          <li>Reservations + Advisor</li>
+          <li>Anomaly + forecast</li>
+        </ul>
+      </div>
+      <div class="step-arrow">→</div>
+      <div class="step goal">
+        <div class="step-head">
+          <div class="step-num">L4</div>
+          <div class="step-name">Operate</div>
+        </div>
+        <ul class="step-list">
+          <li>Unit economics</li>
+          <li>Automated guardrails</li>
+          <li>Executive scorecards</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5. FINOPS FRAMEWORK -->
+  <section class="slide">
+    <div class="eyebrow">Industry standard · finops.org</div>
+    <h2 class="headline">The FinOps Framework</h2>
+    <div class="grid-3" style="margin-top:8px">
+      <div class="card">
+        <h3>3 Phases</h3>
+        <ul class="bullets">
+          <li><strong>Inform:</strong> visibility</li>
+          <li><strong>Optimize:</strong> act on it</li>
+          <li><strong>Operate:</strong> make it routine</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>4 Domains</h3>
+        <ul class="bullets">
+          <li>Understand Usage &amp; Cost</li>
+          <li>Quantify Business Value</li>
+          <li>Optimize Usage &amp; Cost</li>
+          <li>Manage the Practice</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>6 Principles</h3>
+        <ul class="bullets">
+          <li>Teams collaborate across functions</li>
+          <li>Business value drives decisions</li>
+          <li>Everyone owns their usage</li>
+          <li>Data must be timely &amp; accurate</li>
+          <li>A central team enables</li>
+          <li>Variable cost model is leveraged</li>
+        </ul>
+      </div>
+    </div>
+    <p class="footnote">2026 added an <strong>Executive Strategy Alignment</strong> capability, connecting tech value to business strategy. Worth knowing if your CFO asks.</p>
+  </section>
+
+  <!-- 6. FOCUS - YOU ALREADY HAVE IT -->
+  <section class="slide">
+    <div class="eyebrow">FOCUS</div>
+    <h2 class="headline">You already export to FOCUS.</h2>
+    <div class="grid-2" style="margin-top:14px;align-items:stretch">
+      <div class="col" style="display:flex;flex-direction:column;gap:18px">
+        <div class="card" style="flex:1;display:flex;flex-direction:column;justify-content:center">
+          <h3>What FOCUS gives you, that raw exports don't</h3>
+          <ul class="bullets" style="margin-top:6px">
+            <li>One schema across Azure, AWS, GCP, Oracle, Databricks, Snowflake. Portable mental model, portable dashboards.</li>
+            <li>Stable column names. Microsoft can change EA → MCA → CSP underneath; FOCUS abstractions don't break your reports.</li>
+            <li>Four cost flavors, not one: Billed, Effective, List, Contracted. Each answers a different question.</li>
+            <li>Industry-standard semantics. Hire a FinOps practitioner and they're productive on day one.</li>
+          </ul>
+        </div>
+      </div>
+      <div class="col" style="display:flex;flex-direction:column;gap:14px;justify-content:center">
+        <div class="stat"><div class="num">v1.2</div><div class="label">FOCUS spec, ratified May 2025 by the FinOps Foundation Steering Committee</div></div>
+        <div class="stat"><div class="num">~50</div><div class="label">Azure-specific <code>x_*</code> extension columns on top of the standard set</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 7. FOCUS COLUMNS -->
+  <section class="slide">
+    <div class="eyebrow">FOCUS columns</div>
+    <h2 class="headline">The columns that <span class="accent">change the conversation</span></h2>
+
+    <div class="cost-flavors">
+      <div class="cf-head">
+        <span class="cf-label">Cost</span>
+        <span class="cf-tag">4 flavors</span>
+      </div>
+      <div class="cf-grid">
+        <div class="cf-card">
+          <div class="cf-name">BilledCost</div>
+          <div class="cf-desc">Invoice basis</div>
+          <div class="cf-use">For finance reconciliation</div>
+        </div>
+        <div class="cf-card">
+          <div class="cf-name">EffectiveCost</div>
+          <div class="cf-desc">Amortized + all discounts</div>
+          <div class="cf-use">For trend analysis</div>
+        </div>
+        <div class="cf-card">
+          <div class="cf-name">ListCost</div>
+          <div class="cf-desc">Pay-as-you-go reference</div>
+          <div class="cf-use">To size your discounts</div>
+        </div>
+        <div class="cf-card">
+          <div class="cf-name">ContractedCost</div>
+          <div class="cf-desc">Negotiated rate</div>
+          <div class="cf-use">To track negotiated value</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-groups">
+      <div class="col-group">
+        <div class="cg-title">Identity</div>
+        <div class="cg-chips"><span>BillingAccountId</span><span>SubAccountId</span><span>ResourceId</span><span>ResourceType</span></div>
+      </div>
+      <div class="col-group">
+        <div class="cg-title">Time</div>
+        <div class="cg-chips"><span>BillingPeriodStart/End</span><span>ChargePeriodStart/End</span></div>
+      </div>
+      <div class="col-group">
+        <div class="cg-title">Service</div>
+        <div class="cg-chips"><span>ServiceCategory</span><span>ServiceName</span><span>SkuId / SkuMeter</span></div>
+      </div>
+      <div class="col-group">
+        <div class="cg-title">Commitment</div>
+        <div class="cg-chips"><span>CommitmentDiscountId</span><span>Status</span><span>Category</span></div>
+      </div>
+      <div class="col-group">
+        <div class="cg-title">Tags + Custom</div>
+        <div class="cg-chips"><span>Tags JSON</span><span>x_CostCenter</span><span>x_BillingExchangeRate</span><span>x_ResourceGroupName</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 8. MICROSOFT FINOPS TOOLKIT -->
+  <section class="slide">
+    <div class="eyebrow">microsoft.github.io/finops-toolkit</div>
+    <h2 class="headline">Microsoft FinOps Toolkit</h2>
+    <p class="lead">Open-source (MIT), maintained by Microsoft, version 13 as of January 2026. The fastest way to get from "I have a FOCUS export" to a working hub. Use it.</p>
+    <div class="grid-3">
+      <div class="card"><h3><span class="num">1</span> FinOps Hubs</h3><p>Bicep-deployable storage + ADX/Fabric backbone for cost data.</p></div>
+      <div class="card"><h3><span class="num">2</span> Power BI Starter Kits</h3><p>Pre-built reports on FOCUS data. Instant uplift over your current dashboard.</p></div>
+      <div class="card"><h3><span class="num">3</span> FinOps Workbooks</h3><p>Azure Workbook engineers can self-serve from inside the portal.</p></div>
+      <div class="card"><h3><span class="num">4</span> Optimization Engine</h3><p>Extensible custom recommendations, beyond Advisor's defaults.</p></div>
+      <div class="card"><h3><span class="num">5</span> FinOps Alerts</h3><p>Automate idle-resource cleanup; budget-breach notifications.</p></div>
+      <div class="card"><h3><span class="num">6</span> Open Data</h3><p>Pricing, regions, services lookup tables. Useful for friendly-name enrichment.</p></div>
+    </div>
+    <p class="footnote">The Toolkit is the floor of a real FinOps platform, not the ceiling. Worth deploying regardless.</p>
+  </section>
+
+  <!-- 9. TOOLKIT ARCHITECTURE -->
+  <section class="slide">
+    <div class="eyebrow">Reference architecture</div>
+    <h2 class="headline">From FOCUS export to <span class="accent">FinOps Hub</span></h2>
+
+    <div class="arch">
+      <div class="arch-stage">
+        <div class="arch-stage-label">Azure sources</div>
+        <div class="arch-card src">
+          <div class="arch-card-name">Cost Management</div>
+          <div class="arch-card-meta">FOCUS export · daily</div>
+        </div>
+        <div class="arch-card src">
+          <div class="arch-card-name">Reservations</div>
+          <div class="arch-card-meta">Utilisation + recs</div>
+        </div>
+        <div class="arch-card src">
+          <div class="arch-card-name">Resource Graph</div>
+          <div class="arch-card-meta">Live config + tags</div>
+        </div>
+        <div class="arch-card src">
+          <div class="arch-card-name">Advisor</div>
+          <div class="arch-card-meta">First-party recs</div>
+        </div>
+      </div>
+
+      <div class="arch-connector">
+        <span class="arch-arrow">→</span>
+      </div>
+
+      <div class="arch-stage">
+        <div class="arch-stage-label">FinOps Hub</div>
+        <div class="arch-card pipe">
+          <div class="arch-card-icon">📦</div>
+          <div class="arch-card-name">Storage Account</div>
+          <div class="arch-card-meta">Parquet · partitioned</div>
+        </div>
+        <div class="arch-flow">↓</div>
+        <div class="arch-card pipe featured">
+          <div class="arch-card-icon">⚡</div>
+          <div class="arch-card-name">Azure Data Explorer</div>
+          <div class="arch-card-meta">or Microsoft Fabric</div>
+        </div>
+      </div>
+
+      <div class="arch-connector">
+        <span class="arch-arrow">→</span>
+      </div>
+
+      <div class="arch-stage">
+        <div class="arch-stage-label">Consumption</div>
+        <div class="arch-card out">
+          <div class="arch-card-name">Power BI</div>
+          <div class="arch-card-meta">Toolkit starter reports</div>
+        </div>
+        <div class="arch-card out">
+          <div class="arch-card-name">Executive Dashboards</div>
+          <div class="arch-card-meta">CFO / leadership</div>
+        </div>
+        <div class="arch-card out">
+          <div class="arch-card-name">Engineer Workbooks</div>
+          <div class="arch-card-meta">Self-service in portal</div>
+        </div>
+      </div>
+    </div>
+
+    <p class="footnote">Deployable with the Toolkit's Bicep modules. Sprint-sized.</p>
+  </section>
+
+  <!-- 10. WHERE TOOLKIT STOPS -->
+  <section class="slide">
+    <div class="eyebrow">Where the toolkit stops</div>
+    <h2 class="headline">Where the Toolkit stops, and <span class="accent">DIY begins</span></h2>
+    <div class="grid-2" style="margin-top:8px">
+      <div class="card">
+        <h3 style="color:#7be0a8">Toolkit gives you</h3>
+        <ul class="bullets">
+          <li>FOCUS-shaped cost data in your own storage</li>
+          <li>Reservation utilisation snapshots</li>
+          <li>Advisor recommendations passthrough</li>
+          <li>Pre-built PBI reports + workbooks</li>
+          <li>Open data for service-name normalisation</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3 style="color:#ff6a4a">Toolkit doesn't give you</h3>
+        <ul class="bullets">
+          <li>Live Azure Resource Graph joins (config, tags-at-rest)</li>
+          <li>Per-VM rightsizing with CPU/memory metrics</li>
+          <li>Cross-tool prioritisation (cost + security + ops)</li>
+          <li>Forecasting + anomaly detection out of the box</li>
+          <li>Multi-tenant slicing (relevant if you have BUs or M&amp;A activity)</li>
+          <li>EOL/retirement-driven cost forecasting</li>
+          <li>"Saved scopes / lenses" for different audiences</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- 11. TAGGING - HARD TRUTH -->
+  <section class="slide">
+    <div class="eyebrow">Tagging</div>
+    <h2 class="headline">Most FinOps efforts <span class="accent">die here.</span></h2>
+    <div class="grid-3">
+      <div class="stat"><div class="num">30–50%</div><div class="label">Of cloud spend untagged or inconsistently tagged at most enterprises (FinOps Foundation surveys)</div></div>
+      <div class="stat"><div class="num">&gt;90%</div><div class="label">Tag compliance is the <em>initial</em> goal per the FinOps Tagging WG. Harder than it sounds.</div></div>
+      <div class="stat"><div class="num">~12mo</div><div class="label">Typical time to drag a brownfield Azure estate to that goal without enforcement automation</div></div>
+    </div>
+    <h3 style="margin-top:36px">Failure modes you'll recognise</h3>
+    <ul class="clean">
+      <li><span class="marker">A</span><div>Tags exist on Resource Groups but not children. Azure does <strong>not</strong> auto-inherit. Most "untagged" rows live here.</div></li>
+      <li><span class="marker">B</span><div><code>costCenter</code>, <code>CostCenter</code>, <code>cost-center</code>, <code>cc</code> all coexist by week two. Case + alias sprawl.</div></li>
+      <li><span class="marker">C</span><div>Tag-at-deploy works; tag-at-modify is forgotten. Drift is the silent killer.</div></li>
+      <li><span class="marker">D</span><div>"Untagged" treated as a backlog ticket rather than a tracked, time-series KPI on an executive dashboard.</div></li>
+    </ul>
+  </section>
+
+  <!-- 12. TAGGING STRATEGY -->
+  <section class="slide">
+    <div class="eyebrow">Tagging · what works</div>
+    <h2 class="headline">A working strategy</h2>
+    <p class="lead" style="margin-bottom:18px">You've already had separate sessions on the taxonomy itself, so we won't relitigate. A few reinforcements worth locking in <em>around</em> it.</p>
+
+    <div class="tag-steps">
+      <div class="tag-step">
+        <div class="ts-num">1</div>
+        <div class="ts-body">
+          <div class="ts-title">Define mandatory taxonomy</div>
+          <div class="ts-desc">Before anyone deploys. <span class="ts-note">Done. Keep iterating quarterly with finance.</span></div>
+        </div>
+      </div>
+      <div class="tag-step">
+        <div class="ts-num">2</div>
+        <div class="ts-body">
+          <div class="ts-title">Enforce via Azure Policy</div>
+          <div class="ts-desc"><code>deny</code> on missing tags · <code>modify</code> to inherit RG → child resources.</div>
+        </div>
+      </div>
+      <div class="tag-step featured">
+        <div class="ts-num">3</div>
+        <div class="ts-body">
+          <div class="ts-title">Parse a defined set · ignore the noise</div>
+          <div class="ts-desc">Only consume the tags <em>you</em> defined. Auto-assigned tags from <strong>Databricks</strong>, <strong>AKS / Kubernetes</strong>, <strong>Veeam</strong>, ARM templates and platform agents are noise. They pollute reports and break allocation.</div>
+        </div>
+      </div>
+      <div class="tag-step">
+        <div class="ts-num">4</div>
+        <div class="ts-body">
+          <div class="ts-title">Normalise at ingest</div>
+          <div class="ts-desc">Case-fold + collapse aliases (<code>costCenter</code> = <code>CostCenter</code> = <code>cc</code>). Tag-lint pipeline before the data lands in your warehouse.</div>
+        </div>
+      </div>
+      <div class="tag-step">
+        <div class="ts-num">5</div>
+        <div class="ts-body">
+          <div class="ts-title">Track coverage as a KPI</div>
+          <div class="ts-desc">Untagged % over time, on an executive dashboard. Not in a backlog ticket.</div>
+        </div>
+      </div>
+      <div class="tag-step">
+        <div class="ts-num">6</div>
+        <div class="ts-body">
+          <div class="ts-title">Allocate the unallocatable</div>
+          <div class="ts-desc">Cost Management allocation rules for shared infra · fallback by sub owner so nothing lands in "unowned".</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid-2" style="margin-top:18px">
+      <div class="card">
+        <h3>Mandatory keys</h3>
+        <p style="margin-top:8px"><span class="pill">CostCenter</span> <span class="pill">Environment</span> <span class="pill">Application</span> <span class="pill">Owner</span></p>
+      </div>
+      <div class="card">
+        <h3>Recommended (phase 2)</h3>
+        <p style="margin-top:8px"><span class="pill dim">BusinessUnit</span> <span class="pill dim">DataClassification</span> <span class="pill dim">Lifecycle</span> <span class="pill dim">CreatedBy</span></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 13. COST ALLOCATION -->
+  <section class="slide">
+    <div class="eyebrow">Allocation · the shared-cost problem</div>
+    <h2 class="headline">Some costs <span class="accent">can't</span> be tagged.<br/>That's what allocation rules are for.</h2>
+    <div class="grid-2" style="margin-top:14px">
+      <div class="card">
+        <h3>The unallocatable layer</h3>
+        <p>Hub VNets · ExpressRoute · Log Analytics workspaces · shared identity · monitoring · platform DevOps</p>
+        <p>You can't put one CostCenter tag on these. They serve everyone.</p>
+      </div>
+      <div class="card">
+        <h3>Four solutions, in order of maturity</h3>
+        <ul class="bullets">
+          <li><strong>Cost Management allocation rules:</strong> split by usage proxy (e.g. tagged-resource %)</li>
+          <li><strong>Showback before chargeback.</strong> Surface allocations for 1–2 quarters before invoicing internally.</li>
+          <li><strong>Azure's <code>x_CostCenter</code> column.</strong> Separate from <code>Tags</code>, set by billing admin.</li>
+          <li><strong>Default fallback:</strong> <code>x_AccountOwnerId</code> / sub owner. Nothing should land in "unowned".</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- 14. ENRICHMENT - DATA MODEL -->
+  <section class="slide">
+    <div class="eyebrow">Enrichment</div>
+    <h2 class="headline">Cost row + <span class="accent">live config</span> = decision</h2>
+
+    <div class="join-viz">
+
+      <!-- LEFT: cost row -->
+      <div class="join-col">
+        <div class="join-label">What you have today</div>
+        <div class="entity primary">
+          <div class="entity-head">FOCUS_COST</div>
+          <ul class="entity-fields">
+            <li><span class="ef-name">ResourceId</span><span class="ef-type">string</span></li>
+            <li><span class="ef-name">BilledCost</span><span class="ef-type">decimal</span></li>
+            <li><span class="ef-name">EffectiveCost</span><span class="ef-type">decimal</span></li>
+            <li><span class="ef-name">Tags</span><span class="ef-type">json</span></li>
+            <li><span class="ef-name">ChargePeriodStart</span><span class="ef-type">date</span></li>
+          </ul>
+        </div>
+        <div class="join-caption">Tells you <em>how much</em>.</div>
+      </div>
+
+      <div class="join-op">+</div>
+
+      <!-- MIDDLE: enrichment sources -->
+      <div class="join-col wide">
+        <div class="join-label">Joined with</div>
+        <div class="entity-grid">
+          <div class="entity">
+            <div class="entity-head sm">RESOURCE <span class="entity-src">Resource Graph</span></div>
+            <ul class="entity-fields">
+              <li><span class="ef-name">ResourceType</span></li>
+              <li><span class="ef-name">Region</span></li>
+              <li><span class="ef-name">TagsAtRest</span></li>
+            </ul>
+          </div>
+          <div class="entity">
+            <div class="entity-head sm">VM_INVENTORY <span class="entity-src">Azure REST + Monitor</span></div>
+            <ul class="entity-fields">
+              <li><span class="ef-name">SkuName</span></li>
+              <li><span class="ef-name">VCpus / MemoryGb</span></li>
+              <li><span class="ef-name">AvgCpuPct (30d)</span></li>
+            </ul>
+          </div>
+          <div class="entity">
+            <div class="entity-head sm">RESERVATION <span class="entity-src">Consumption API</span></div>
+            <ul class="entity-fields">
+              <li><span class="ef-name">CommitmentDiscountId</span></li>
+              <li><span class="ef-name">UtilizationPct</span></li>
+              <li><span class="ef-name">Term</span></li>
+            </ul>
+          </div>
+          <div class="entity">
+            <div class="entity-head sm">ADVISOR_REC <span class="entity-src">Advisor REST</span></div>
+            <ul class="entity-fields">
+              <li><span class="ef-name">Category</span></li>
+              <li><span class="ef-name">Impact</span></li>
+              <li><span class="ef-name">MonthlySavings</span></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="join-op">=</div>
+
+      <!-- RIGHT: decisions -->
+      <div class="join-col">
+        <div class="join-label">What you can act on</div>
+        <div class="decision-card">
+          <div class="dc-amount">€1,100<span>/mo</span></div>
+          <div class="dc-text">VM at €1,400/mo, 3% CPU. Advisor: rightsize to B-series.</div>
+          <div class="dc-action">→ Rightsize</div>
+        </div>
+        <div class="decision-card">
+          <div class="dc-amount">€420<span>/mo</span></div>
+          <div class="dc-text">Reservation 28% utilised. Wrong scope.</div>
+          <div class="dc-action">→ Re-scope or sell</div>
+        </div>
+        <div class="decision-card">
+          <div class="dc-amount">€87<span>/mo</span></div>
+          <div class="dc-text">Premium SSD detached for 90+ days.</div>
+          <div class="dc-action">→ Delete</div>
+        </div>
+        <div class="join-caption">Tells you <strong>what to act on.</strong></div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- 15. ENRICHMENT SOURCES -->
+  <section class="slide">
+    <div class="eyebrow">Enrichment · concrete checklist</div>
+    <h2 class="headline">The seven sources beyond Cost Management</h2>
+    <table>
+      <thead><tr><th style="width:24%">Source</th><th style="width:22%">API / mechanism</th><th>What it brings</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Azure Resource Graph</strong></td><td>KQL across subscriptions</td><td class="mute">Live config, tags-at-rest, dependencies, resource counts</td></tr>
+        <tr><td><strong>Reservations</strong></td><td>Cost Mgmt + Consumption REST</td><td class="mute">Utilisation %, expiry, term, recommendations</td></tr>
+        <tr><td><strong>Advisor</strong></td><td>Advisor REST</td><td class="mute">First-party rightsizing, idle, low-utilisation recs</td></tr>
+        <tr><td><strong>Azure REST APIs</strong></td><td>per-service ARM REST</td><td class="mute">VM SKU details, App Service plan tier, Storage redundancy &amp; tier, Cosmos throughput, Log Analytics retention, ACR SKU</td></tr>
+        <tr><td><strong>Monitor metrics</strong></td><td>Monitor REST</td><td class="mute">CPU, memory, IOPS, network. The data Advisor's rightsizing assumes.</td></tr>
+        <tr><td><strong>Service Health / Updates</strong></td><td>RSS + curated EOL feed</td><td class="mute">Forced migrations, deprecations, SKU retirements. Forward-looking cost.</td></tr>
+        <tr><td><strong>Toolkit Open Data</strong></td><td>static lookup</td><td class="mute">Service-name → friendly-category mapping (the "what is this billing line?" problem)</td></tr>
+      </tbody>
+    </table>
+    <p class="footnote">Build all seven and you have a real platform. Build three of seven and you have a reporting tool with extra steps.</p>
+  </section>
+
+  <!-- 16. FULL REFERENCE ARCH -->
+  <section class="slide">
+    <div class="eyebrow">Reference architecture · enriched</div>
+    <h2 class="headline">What "done" looks like</h2>
+    <div class="diagram"><div class="mermaid">
+flowchart LR
+    subgraph SRC["Azure subscriptions"]
+      CM[Cost Mgmt]
+      ARG[Resource Graph]
+      RES[Reservations]
+      ADV[Advisor]
+      MON[Monitor]
+      RP[Azure REST APIs]
+    end
+    CM -->|FOCUS export · daily| HUB[(FinOps Hub<br/>Storage)]
+    HUB --> RAW[(Raw Parquet<br/>partitioned)]
+    RAW --> XFM[Transform<br/>Polars / Spark / Fabric]
+    ARG --> XFM
+    RES --> XFM
+    ADV --> XFM
+    MON --> XFM
+    RP --> XFM
+    XFM --> WH[(Analytics Store<br/>ADX / Fabric / Timescale)]
+    WH --> API[Internal API]
+    API --> PBI[Power BI]
+    API --> WEB[Web app · self-service]
+    API --> SLACK[Notifications]
+    WH -.materialized.-> AGG[Pre-aggregated rollups]
+    AGG --> PBI
+    classDef src fill:#241432,stroke:#e5640c,color:#fff
+    classDef store fill:#3a2350,stroke:#ef1506,stroke-width:2px,color:#fff
+    classDef out fill:#241432,stroke:#7be0a8,color:#fff
+    class CM,ARG,RES,ADV,MON,RP src
+    class HUB,RAW,XFM,WH,AGG store
+    class API,PBI,WEB,SLACK out
+    </div></div>
+  </section>
+
+  <!-- 17. GOTCHAS -->
+  <section class="slide">
+    <div class="eyebrow">Operational gotchas</div>
+    <h2 class="headline">Operational gotchas</h2>
+    <div class="grid-2">
+      <div class="card accent">
+        <ul class="clean">
+          <li><span class="marker">1</span><div><strong>Cost Mgmt rate limits are tighter than docs claim.</strong> Reality: 10/min/tenant + 4/min/scope. Build a token-bucket scheduler, not a naive loop.</div></li>
+          <li><span class="marker">2</span><div><strong>Resource Graph throttling.</strong> Query <em>across</em> subscriptions in one KQL; partition results client-side. One query per sub = 429.</div></li>
+          <li><span class="marker">3</span><div><strong>Volume kills small containers.</strong> Multi-GB FOCUS exports. Stream Parquet to disk, transform lazy, sync in chunks.</div></li>
+          <li><span class="marker">4</span><div><strong>EA vs MCA vs CSP.</strong> Different scope hierarchies. Use FOCUS abstractions; resist hardcoding.</div></li>
+          <li><span class="marker">5</span><div><strong>Currency / FX.</strong> <code>x_BillingExchangeRate</code> × <code>x_BillingExchangeRateDate</code>. Don't sum raw <code>BilledCost</code> across rate changes.</div></li>
+        </ul>
+      </div>
+      <div class="card accent">
+        <ul class="clean">
+          <li><span class="marker">6</span><div><strong>Actual vs amortized cost.</strong> Pick a default (Effective for trends, Billed for finance). Make the toggle explicit in the UI.</div></li>
+          <li><span class="marker">7</span><div><strong>Refresh latency.</strong> Cost Mgmt data is 8–24h delayed. Always show "as of &lt;timestamp&gt;".</div></li>
+          <li><span class="marker">8</span><div><strong>Tag inheritance.</strong> Children don't inherit RG tags. Either Policy <code>modify</code>, or join through ARG to fill blanks at query time.</div></li>
+          <li><span class="marker">9</span><div><strong>Untagged ≠ unallocatable.</strong> Default fallback by <code>x_AccountOwnerId</code>. Make untagged % a tracked KPI.</div></li>
+          <li><span class="marker">10</span><div><strong>Schema drift.</strong> FOCUS evolves (1.0 → 1.0r2 → 1.1 → 1.2). Pin a version, validate on ingest, alert on shape change.</div></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- 18. DEMO -->
+  <section class="slide">
+    <div class="demo-slide">
+      <h1 class="title"><span class="accent">Demo</span></h1>
+    </div>
+  </section>
+
+  <!-- 19. REFERENCES -->
+  <section class="slide">
+    <div class="eyebrow">References</div>
+    <h2 class="headline">References</h2>
+    <div class="grid-2">
+      <div class="card">
+        <h3>FinOps Foundation</h3>
+        <ul class="bullets">
+          <li><a style="color:#ffd9c8" href="https://www.finops.org/framework/">FinOps Framework 2026</a></li>
+          <li><a style="color:#ffd9c8" href="https://focus.finops.org/focus-specification/v1-2/">FOCUS Specification v1.2</a></li>
+          <li><a style="color:#ffd9c8" href="https://www.finops.org/wg/how-to-measure-tagging-policy-compliance/">Tagging Policy Compliance WG</a></li>
+          <li><a style="color:#ffd9c8" href="https://www.finops.org/wg/cloud-cost-allocation/">Cloud Cost Allocation Guide</a></li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>Microsoft</h3>
+        <ul class="bullets">
+          <li><a style="color:#ffd9c8" href="https://microsoft.github.io/finops-toolkit/">FinOps Toolkit</a></li>
+          <li><a style="color:#ffd9c8" href="https://learn.microsoft.com/en-us/cloud-computing/finops/focus/what-is-focus">What is FOCUS? (Microsoft Learn)</a></li>
+          <li><a style="color:#ffd9c8" href="https://learn.microsoft.com/en-us/azure/cost-management-billing/dataset-schema/cost-usage-details-focus">FOCUS export schema (Azure)</a></li>
+          <li><a style="color:#ffd9c8" href="https://focus.finops.org/get-started/microsoft/">Get-started with FOCUS — Microsoft</a></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<footer class="bottombar">
+  <span>Arxus · FinOps on Azure</span>
+  <div class="progress"><span id="progressBar"></span></div>
+  <span><span id="slideIdx">1</span> / <span id="slideTotal">21</span></span>
+</footer>
+<div class="nav-hint">← / → · Space · Home / End · P to print</div>
+
+<script>
+  // Mermaid theme aligned with deck
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: 'base',
+    themeVariables: {
+      background: '#2d1b3d',
+      primaryColor: '#3a2350',
+      primaryTextColor: '#f5f2ed',
+      primaryBorderColor: '#e5640c',
+      lineColor: '#e5640c',
+      secondaryColor: '#241432',
+      tertiaryColor: '#1a0d23',
+      fontFamily: 'Inter, sans-serif',
+      fontSize: '15px'
+    },
+    flowchart: { curve: 'basis', padding: 14 },
+    er: { useMaxWidth: true }
+  });
+
+  // Slide navigation
+  const slides = Array.from(document.querySelectorAll('.slide'));
+  const total = slides.length;
+  document.getElementById('slideTotal').textContent = total;
+  let idx = 0;
+
+  function show(i){
+    idx = Math.max(0, Math.min(total - 1, i));
+    slides.forEach((s, k) => s.classList.toggle('active', k === idx));
+    document.getElementById('slideIdx').textContent = idx + 1;
+    document.getElementById('progressBar').style.width = ((idx + 1) / total * 100) + '%';
+    location.hash = String(idx + 1);
+  }
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight' || e.key === 'PageDown' || e.key === ' ') { e.preventDefault(); show(idx + 1); }
+    else if (e.key === 'ArrowLeft' || e.key === 'PageUp')                { e.preventDefault(); show(idx - 1); }
+    else if (e.key === 'Home')                                            { e.preventDefault(); show(0); }
+    else if (e.key === 'End')                                             { e.preventDefault(); show(total - 1); }
+    else if (e.key === 'p' || e.key === 'P')                              { window.print(); }
+  });
+
+  // Honour hash on load
+  const initial = parseInt(location.hash.replace('#',''), 10);
+  if (!isNaN(initial) && initial >= 1 && initial <= total) show(initial - 1);
+  show(idx);
+</script>
+</body>
+</html>
