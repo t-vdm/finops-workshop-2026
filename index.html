@@ -1168,6 +1168,13 @@ flowchart LR
     else if (e.key === 'p' || e.key === 'P')                              { window.print(); }
   });
 
+  // Click forward, shift-click back. Skip if text is selected or click is on a link.
+  document.addEventListener('click', (e) => {
+    if (e.target.closest('a')) return;
+    if (window.getSelection && window.getSelection().toString().length > 0) return;
+    if (e.shiftKey) show(idx - 1); else show(idx + 1);
+  });
+
   // Honour hash on load
   const initial = parseInt(location.hash.replace('#',''), 10);
   if (!isNaN(initial) && initial >= 1 && initial <= total) show(initial - 1);
