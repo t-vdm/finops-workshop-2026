@@ -466,6 +466,32 @@
     color:#ffd9c8; white-space:pre; overflow-x:auto;
   }
   pre.code-block.sm{font-size:11px;line-height:1.45;padding:10px 12px}
+
+  /* Reference ERD (layered) */
+  .erd{flex:1;display:flex;flex-direction:column;gap:10px;padding:8px 0;min-height:0}
+  .erd-layer{
+    display:grid; grid-template-columns: 220px 1fr; gap:18px;
+    background: var(--card); border:1px solid var(--line); border-radius:12px;
+    padding:14px 18px; align-items:center;
+  }
+  .erd-layer.facts{background: linear-gradient(90deg, rgba(239,21,6,.10), transparent 70%), var(--card); border-color: rgba(239,21,6,.30)}
+  .erd-layer.dims{background: linear-gradient(90deg, rgba(229,100,12,.08), transparent 70%), var(--card); border-color: rgba(229,100,12,.22)}
+  .erd-layer.biz{background: linear-gradient(90deg, rgba(110,170,230,.07), transparent 70%), var(--card); border-color: rgba(110,170,230,.20)}
+  .erd-layer.alloc{background: linear-gradient(90deg, rgba(180,123,224,.07), transparent 70%), var(--card); border-color: rgba(180,123,224,.22)}
+  .erd-layer.serving{background: linear-gradient(90deg, rgba(123,224,168,.07), transparent 70%), var(--card); border-color: rgba(123,224,168,.22)}
+  .erd-layer-head{display:flex;flex-direction:column;gap:2px}
+  .erd-layer-name{font-size:14px;font-weight:700;color:var(--text);letter-spacing:-.01em}
+  .erd-layer-desc{font-size:12px;color:var(--muted)}
+  .erd-chips{display:flex;flex-wrap:wrap;gap:6px}
+  .erd-chip{
+    font-family:'JetBrains Mono',monospace; font-size:11px;
+    background:rgba(255,255,255,.05); border:1px solid var(--line);
+    color:var(--text); padding:5px 9px; border-radius:6px;
+  }
+  .erd-chip.hub{
+    background:linear-gradient(135deg, rgba(239,21,6,.22), rgba(229,100,12,.10));
+    border:1px solid rgba(239,21,6,.45); color:#ffd9c8; font-weight:600;
+  }
 </style>
 </head>
 <body>
@@ -1170,6 +1196,91 @@ flowchart LR
         </div>
       </div>
     </div>
+  </section>
+
+  <!-- A1b. FULL ERD (where this grows) -->
+  <section class="slide">
+    <div class="eyebrow">Reference data model</div>
+    <h2 class="headline">Where this grows to over time</h2>
+
+    <div class="erd">
+      <div class="erd-layer facts">
+        <div class="erd-layer-head">
+          <div class="erd-layer-name">Facts</div>
+          <div class="erd-layer-desc">What costs / events happened</div>
+        </div>
+        <div class="erd-chips">
+          <span class="erd-chip hub">fact_focus_cost</span>
+          <span class="erd-chip">fact_reservation_utilization</span>
+          <span class="erd-chip">fact_advisor_rec</span>
+          <span class="erd-chip">fact_resource_metrics</span>
+          <span class="erd-chip">fact_budget_actual</span>
+          <span class="erd-chip">fact_anomaly</span>
+          <span class="erd-chip">fact_forecast</span>
+        </div>
+      </div>
+
+      <div class="erd-layer dims">
+        <div class="erd-layer-head">
+          <div class="erd-layer-name">Technical dimensions</div>
+          <div class="erd-layer-desc">Slice-by, Azure-shaped</div>
+        </div>
+        <div class="erd-chips">
+          <span class="erd-chip">dim_billing_account</span>
+          <span class="erd-chip">dim_subscription</span>
+          <span class="erd-chip">dim_resource_group</span>
+          <span class="erd-chip">dim_resource</span>
+          <span class="erd-chip">dim_service</span>
+          <span class="erd-chip">dim_sku</span>
+          <span class="erd-chip">dim_region</span>
+          <span class="erd-chip">dim_time</span>
+          <span class="erd-chip">dim_reservation</span>
+          <span class="erd-chip">dim_pricing_model</span>
+        </div>
+      </div>
+
+      <div class="erd-layer biz">
+        <div class="erd-layer-head">
+          <div class="erd-layer-name">Business dimensions</div>
+          <div class="erd-layer-desc">Chargeback / org layer</div>
+        </div>
+        <div class="erd-chips">
+          <span class="erd-chip">dim_cost_center</span>
+          <span class="erd-chip">dim_application</span>
+          <span class="erd-chip">dim_environment</span>
+          <span class="erd-chip">dim_owner</span>
+        </div>
+      </div>
+
+      <div class="erd-layer alloc">
+        <div class="erd-layer-head">
+          <div class="erd-layer-name">Bridges + allocation</div>
+          <div class="erd-layer-desc">M:N relations and shared-cost splits</div>
+        </div>
+        <div class="erd-chips">
+          <span class="erd-chip">bridge_resource_tags</span>
+          <span class="erd-chip">bridge_resource_application</span>
+          <span class="erd-chip">dim_allocation_rule</span>
+          <span class="erd-chip">fact_allocation_split</span>
+        </div>
+      </div>
+
+      <div class="erd-layer serving">
+        <div class="erd-layer-head">
+          <div class="erd-layer-name">Serving · materialised rollups</div>
+          <div class="erd-layer-desc">What dashboards actually query</div>
+        </div>
+        <div class="erd-chips">
+          <span class="erd-chip">mv_cost_monthly_by_costcenter</span>
+          <span class="erd-chip">mv_cost_daily_by_service</span>
+          <span class="erd-chip">mv_ri_coverage_monthly</span>
+          <span class="erd-chip">mv_orphaned_resources_daily</span>
+          <span class="erd-chip">mv_unit_economics</span>
+        </div>
+      </div>
+    </div>
+
+    <p class="footnote"><code>fact_focus_cost</code> is the join hub. Every other fact keys back via <code>resource_id</code>, <code>commitment_id</code>, or <code>charge_period_start</code>, so the five layers compose into one query plan.</p>
   </section>
 
   <!-- A2. TAGS PROBLEM -->
