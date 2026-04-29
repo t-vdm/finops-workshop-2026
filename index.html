@@ -1280,57 +1280,57 @@ GROUP BY 1, 2;</pre>
       <thead>
         <tr>
           <th></th>
-          <th>Postgres + Timescale</th>
-          <th>Azure Data Explorer</th>
           <th>Fabric Lakehouse</th>
-          <th>Synapse</th>
+          <th>Azure Data Explorer</th>
+          <th>Postgres + Timescale</th>
         </tr>
       </thead>
       <tbody>
         <tr>
           <td><strong>Volume (10s GB/mo)</strong></td>
+          <td><span class="pill green">Excellent</span></td>
+          <td><span class="pill green">Excellent</span></td>
           <td><span class="pill green">Fine</span></td>
-          <td><span class="pill green">Excellent</span></td>
-          <td><span class="pill green">Excellent</span></td>
-          <td><span class="pill dim">Overkill</span></td>
         </tr>
         <tr>
           <td><strong>Query latency</strong></td>
-          <td>Fast w/ partitioning</td>
-          <td><span class="pill green">Sub-second</span></td>
           <td><span class="pill green">Sub-second on warm</span></td>
-          <td>Variable</td>
+          <td><span class="pill green">Sub-second</span></td>
+          <td>Fast w/ partitioning</td>
         </tr>
         <tr>
           <td><strong>Cost</strong></td>
+          <td>Medium €€</td>
+          <td>Medium €€</td>
           <td><span class="pill green">Low €</span></td>
-          <td>Medium €€</td>
-          <td>Medium €€</td>
-          <td><span class="pill red">High €€€</span></td>
         </tr>
         <tr>
           <td><strong>Skill required</strong></td>
-          <td>Standard SQL</td>
-          <td><span class="pill">KQL</span></td>
           <td>SQL or Spark</td>
-          <td>T-SQL</td>
+          <td><span class="pill">KQL</span></td>
+          <td>Standard SQL</td>
+        </tr>
+        <tr>
+          <td><strong>Lock-in</strong></td>
+          <td>Microsoft Fabric</td>
+          <td>Azure</td>
+          <td><span class="pill green">Portable</span></td>
         </tr>
         <tr>
           <td><strong>Best when</strong></td>
-          <td>You already run Postgres</td>
+          <td>You're going all-in on Fabric</td>
           <td>Time-series first, KQL is fine</td>
-          <td>You're going all-in MS Fabric</td>
-          <td>You already have a Synapse DW</td>
+          <td>You want to step out of Azure lock-in</td>
         </tr>
       </tbody>
     </table>
 
     <div class="card" style="margin-top:18px;border:1px solid rgba(229,100,12,.30)">
-      <h3 style="color:#f5a36b">Honest pick</h3>
+      <h3 style="color:#f5a36b">When to pick which</h3>
       <ul class="bullets" style="margin-top:6px">
-        <li><strong>Fabric Lakehouse</strong> if your data strategy is already Fabric-aligned. Easiest integration with Toolkit's Hub deployment.</li>
-        <li><strong>ADX</strong> if dashboard latency matters more than tooling familiarity, and your team can adopt KQL.</li>
-        <li><strong>Postgres + Timescale</strong> if you want simplicity, full SQL, and lower running cost. Scales fine for a single tenant.</li>
+        <li><strong>Fabric Lakehouse</strong> if your data strategy is already Fabric-aligned. Easiest integration with the Toolkit's Hub deployment, native Power BI semantic models on top.</li>
+        <li><strong>Azure Data Explorer</strong> if dashboard latency matters more than tooling familiarity, and your team can adopt KQL.</li>
+        <li><strong>Postgres + Timescale</strong> if portability matters. Same SQL runs on AWS RDS, on-prem, or anywhere else. The "no Azure-only stack" option.</li>
       </ul>
     </div>
   </section>
