@@ -445,6 +445,27 @@
     flex:1; display:flex; align-items:center; justify-content:center;
   }
   .demo-slide .title{font-size:160px;letter-spacing:-.04em;margin:0}
+
+  /* Schema table (appendix) */
+  table.schema-table{font-size:13px;margin-top:8px}
+  table.schema-table td{
+    padding:5px 10px; border-bottom:1px solid rgba(255,255,255,.04);
+    font-family:'JetBrains Mono',monospace; font-size:12px;
+  }
+  table.schema-table td:first-child{color:var(--text)}
+  table.schema-table td:nth-child(2){color:var(--dim)}
+  table.schema-table td.pk{color:#f5a36b;font-weight:600;font-size:11px;letter-spacing:.04em}
+  table.schema-table td.fk{color:#7be0a8;font-size:11px}
+  table.schema-table td.muted-cell{color:var(--dim);font-size:11px;font-style:italic}
+
+  /* Code blocks (appendix) */
+  pre.code-block{
+    margin:10px 0 0; padding:14px 16px;
+    background:rgba(0,0,0,.30); border:1px solid var(--line); border-radius:8px;
+    font-family:'JetBrains Mono',monospace; font-size:13px; line-height:1.5;
+    color:#ffd9c8; white-space:pre; overflow-x:auto;
+  }
+  pre.code-block.sm{font-size:11px;line-height:1.45;padding:10px 12px}
 </style>
 </head>
 <body>
@@ -1089,6 +1110,264 @@ flowchart LR
     <div class="demo-slide">
       <h1 class="title"><span class="accent">Demo</span></h1>
     </div>
+  </section>
+
+  <!-- A0. APPENDIX DIVIDER -->
+  <section class="slide">
+    <div class="demo-slide">
+      <div style="text-align:center">
+        <div class="eyebrow" style="margin-bottom:24px">For deeper questions</div>
+        <h1 class="title"><span class="accent">Appendix</span></h1>
+        <p class="lead" style="margin-top:18px;color:var(--muted)">Schemas, SQL, storage trade-offs.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- A1. FACT + DIM MODEL -->
+  <section class="slide">
+    <div class="eyebrow">Appendix · data model</div>
+    <h2 class="headline">Fact + dimensions, concrete</h2>
+
+    <div class="grid-2" style="margin-top:8px;align-items:stretch">
+      <div class="card" style="display:flex;flex-direction:column">
+        <h3>fact_focus_cost <span class="pill" style="margin-left:8px">partitioned monthly</span></h3>
+        <table class="schema-table">
+          <tbody>
+            <tr><td>charge_period_start</td><td>date</td><td class="pk">PK</td></tr>
+            <tr><td>resource_id</td><td>text</td><td class="pk">PK</td></tr>
+            <tr><td>sku_price_id</td><td>text</td><td class="pk">PK</td></tr>
+            <tr><td>billed_cost</td><td>numeric(18,4)</td><td></td></tr>
+            <tr><td>effective_cost</td><td>numeric(18,4)</td><td></td></tr>
+            <tr><td>list_cost</td><td>numeric(18,4)</td><td></td></tr>
+            <tr><td>contracted_cost</td><td>numeric(18,4)</td><td></td></tr>
+            <tr><td>pricing_quantity</td><td>numeric(18,6)</td><td></td></tr>
+            <tr><td>charge_category</td><td>text</td><td></td></tr>
+            <tr><td>service_category</td><td>text</td><td></td></tr>
+            <tr><td>service_name</td><td>text</td><td></td></tr>
+            <tr><td>region_id</td><td>text</td><td></td></tr>
+            <tr><td>sub_account_id</td><td>text</td><td class="fk">FK → dim_subscription</td></tr>
+            <tr><td>commitment_id</td><td>text</td><td class="fk">FK → dim_reservation</td></tr>
+            <tr><td>tag_costcenter</td><td>text</td><td class="muted-cell">pivoted</td></tr>
+            <tr><td>tag_environment</td><td>text</td><td class="muted-cell">pivoted</td></tr>
+            <tr><td>tag_application</td><td>text</td><td class="muted-cell">pivoted</td></tr>
+            <tr><td>tags_raw</td><td>jsonb</td><td class="muted-cell">remaining</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="col" style="display:flex;flex-direction:column;gap:14px">
+        <div class="card">
+          <h3>Dimensions</h3>
+          <ul class="bullets" style="margin-top:6px">
+            <li><code>dim_subscription</code> — sub_id, sub_name, billing_account_id, account_owner</li>
+            <li><code>dim_resource</code> — resource_id, type, region, rg, properties (json), tags_at_rest</li>
+            <li><code>dim_service</code> — service_name, service_category, sku_id, friendly_name</li>
+            <li><code>dim_time</code> — date, month, quarter, fiscal_year</li>
+            <li><code>dim_reservation</code> — commitment_id, scope, term, term_start_date</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>Companion facts</h3>
+          <ul class="bullets" style="margin-top:6px">
+            <li><code>fact_reservation_utilization</code> — daily, by commitment_id</li>
+            <li><code>fact_advisor_rec</code> — snapshot, by resource_id</li>
+            <li><code>fact_vm_metrics</code> — CPU/memory/IOPS, daily aggregates</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>Partitioning + retention</h3>
+          <p style="margin:0;font-size:14px;color:var(--muted)">Monthly partitions on <code>charge_period_start</code>. 13 months hot, archive to cold storage after. Indexes on <code>(sub_account_id, charge_period_start)</code> and <code>(tag_costcenter, charge_period_start)</code>.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- A2. TAGS PROBLEM -->
+  <section class="slide">
+    <div class="eyebrow">Appendix · the Tags column problem</div>
+    <h2 class="headline">Three ways to handle <code style="font-size:.7em">Tags</code>. Pick a hybrid.</h2>
+
+    <div class="grid-3" style="margin-top:8px">
+      <div class="card">
+        <h3>Query JSON inline</h3>
+        <p style="margin:6px 0 10px"><code>Tags-&gt;&gt;'CostCenter'</code></p>
+        <p><span class="pill green">Simple</span></p>
+        <p style="margin-top:10px;color:var(--muted);font-size:14px">No transform step. Works on day one.</p>
+        <p style="color:#ff9c8a;font-size:14px;margin-top:8px"><strong>But:</strong> slow at scale, no index unless you create expression indexes per key.</p>
+      </div>
+      <div class="card">
+        <h3>Long-format tag table</h3>
+        <p style="margin:6px 0 10px"><code>(cost_id, key, value)</code></p>
+        <p><span class="pill">Generic</span></p>
+        <p style="margin-top:10px;color:var(--muted);font-size:14px">Index on (key, value). Any tag becomes filterable.</p>
+        <p style="color:#ff9c8a;font-size:14px;margin-top:8px"><strong>But:</strong> cardinality explodes, joins everywhere, harder for BI tools.</p>
+      </div>
+      <div class="card accent">
+        <h3>Pivot mandatory keys to columns</h3>
+        <p style="margin:6px 0 10px"><code>tag_costcenter</code>, <code>tag_environment</code>, ...</p>
+        <p><span class="pill">Recommended hybrid</span></p>
+        <p style="margin-top:10px;color:var(--muted);font-size:14px">Mandatory keys → real columns (fast, indexed). Everything else stays in <code>tags_raw</code> json.</p>
+        <p style="color:#7be0a8;font-size:14px;margin-top:8px"><strong>Best of both.</strong> Fast for the questions you ask 95% of the time.</p>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:18px">
+      <h3>Pivot SQL at ingest</h3>
+      <pre class="code-block">SELECT
+  resource_id,
+  charge_period_start,
+  effective_cost,
+  tags-&gt;&gt;'CostCenter'  AS tag_costcenter,
+  tags-&gt;&gt;'Environment' AS tag_environment,
+  tags-&gt;&gt;'Application' AS tag_application,
+  tags-&gt;&gt;'Owner'       AS tag_owner,
+  tags                  AS tags_raw
+FROM stg_focus_cost
+WHERE charge_period_start &gt;= :ingest_window;</pre>
+    </div>
+  </section>
+
+  <!-- A3. ROLLUPS -->
+  <section class="slide">
+    <div class="eyebrow">Appendix · rollups cookbook</div>
+    <h2 class="headline">Three materialized views you'll definitely build</h2>
+
+    <div class="grid-3" style="margin-top:8px">
+      <div class="card">
+        <h3>Monthly by CostCenter</h3>
+        <p style="font-size:13px;color:var(--muted)">The chargeback view. Refresh daily, full rebuild monthly.</p>
+        <pre class="code-block sm">CREATE MATERIALIZED VIEW
+  mv_cost_monthly_by_cc AS
+SELECT
+  date_trunc('month', charge_period_start)
+                          AS month,
+  coalesce(tag_costcenter,'untagged')
+                          AS cost_center,
+  sum(effective_cost)     AS cost
+FROM fact_focus_cost
+WHERE charge_category = 'Usage'
+GROUP BY 1, 2;</pre>
+      </div>
+
+      <div class="card">
+        <h3>Daily by Service</h3>
+        <p style="font-size:13px;color:var(--muted)">Drives "what changed yesterday?" alerts.</p>
+        <pre class="code-block sm">CREATE MATERIALIZED VIEW
+  mv_cost_daily_by_service AS
+SELECT
+  charge_period_start     AS day,
+  service_category,
+  service_name,
+  sum(effective_cost)     AS cost
+FROM fact_focus_cost
+WHERE charge_category = 'Usage'
+GROUP BY 1, 2, 3;</pre>
+      </div>
+
+      <div class="card">
+        <h3>Reservation coverage</h3>
+        <p style="font-size:13px;color:var(--muted)">RI/SP utilisation tracking, monthly.</p>
+        <pre class="code-block sm">CREATE MATERIALIZED VIEW
+  mv_ri_coverage_monthly AS
+SELECT
+  date_trunc('month', day) AS month,
+  commitment_id,
+  avg(utilization_pct)     AS avg_util,
+  min(utilization_pct)     AS min_util
+FROM fact_reservation_utilization
+GROUP BY 1, 2;</pre>
+      </div>
+    </div>
+
+    <p class="footnote" style="margin-top:18px">Refresh strategy: <strong>incremental</strong> for daily views (append yesterday's partition), <strong>full</strong> for monthly views (small enough to rebuild). Schedule via <code>pg_cron</code>, Fabric pipelines, or your orchestrator of choice.</p>
+  </section>
+
+  <!-- A4. STORAGE ENGINE MATRIX -->
+  <section class="slide">
+    <div class="eyebrow">Appendix · engine choice</div>
+    <h2 class="headline">Where to land the data</h2>
+
+    <table style="margin-top:8px">
+      <thead>
+        <tr>
+          <th></th>
+          <th>Postgres + Timescale</th>
+          <th>Azure Data Explorer</th>
+          <th>Fabric Lakehouse</th>
+          <th>Synapse</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Volume (10s GB/mo)</strong></td>
+          <td><span class="pill green">Fine</span></td>
+          <td><span class="pill green">Excellent</span></td>
+          <td><span class="pill green">Excellent</span></td>
+          <td><span class="pill dim">Overkill</span></td>
+        </tr>
+        <tr>
+          <td><strong>Query latency</strong></td>
+          <td>Fast w/ partitioning</td>
+          <td><span class="pill green">Sub-second</span></td>
+          <td><span class="pill green">Sub-second on warm</span></td>
+          <td>Variable</td>
+        </tr>
+        <tr>
+          <td><strong>Cost</strong></td>
+          <td><span class="pill green">Low €</span></td>
+          <td>Medium €€</td>
+          <td>Medium €€</td>
+          <td><span class="pill red">High €€€</span></td>
+        </tr>
+        <tr>
+          <td><strong>Skill required</strong></td>
+          <td>Standard SQL</td>
+          <td><span class="pill">KQL</span></td>
+          <td>SQL or Spark</td>
+          <td>T-SQL</td>
+        </tr>
+        <tr>
+          <td><strong>Best when</strong></td>
+          <td>You already run Postgres</td>
+          <td>Time-series first, KQL is fine</td>
+          <td>You're going all-in MS Fabric</td>
+          <td>You already have a Synapse DW</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="card" style="margin-top:18px;border:1px solid rgba(229,100,12,.30)">
+      <h3 style="color:#f5a36b">Honest pick</h3>
+      <ul class="bullets" style="margin-top:6px">
+        <li><strong>Fabric Lakehouse</strong> if your data strategy is already Fabric-aligned. Easiest integration with Toolkit's Hub deployment.</li>
+        <li><strong>ADX</strong> if dashboard latency matters more than tooling familiarity, and your team can adopt KQL.</li>
+        <li><strong>Postgres + Timescale</strong> if you want simplicity, full SQL, and lower running cost. Scales fine for a single tenant.</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- A5. SCHEMA EVOLUTION -->
+  <section class="slide">
+    <div class="eyebrow">Appendix · schema evolution</div>
+    <h2 class="headline">FOCUS will keep moving. Plan for it.</h2>
+
+    <ul class="clean" style="max-width:1200px;margin-top:8px">
+      <li><span class="marker">1</span><div>
+        <strong>Pin the version on export.</strong> 1.0r2 today is stable; 1.2 once your downstream is ready. Don't auto-upgrade — schedule it.
+      </div></li>
+      <li><span class="marker">2</span><div>
+        <strong>Validate column shape on ingest.</strong> A 5-line check: assert the columns you depend on are present. Alert when Microsoft adds, renames, or removes a column.
+      </div></li>
+      <li><span class="marker">3</span><div>
+        <strong>Use a view layer between fact table and dashboards.</strong> Column renames (e.g. <code>x_InvoiceId</code> → <code>InvoiceId</code> from 1.0 to 1.2) get absorbed in one place instead of breaking 12 reports.
+      </div></li>
+      <li><span class="marker">4</span><div>
+        <strong>Backfill via Microsoft's 7-year re-export</strong> when bumping FOCUS versions. You can re-export historical data in the new shape — no need to migrate existing rows.
+      </div></li>
+      <li><span class="marker">5</span><div>
+        <strong>Track FOCUS conformance</strong> via Microsoft's published Conformance Report. Tells you which gaps still exist (e.g. CapacityReservation columns currently null).
+      </div></li>
+    </ul>
   </section>
 
   <!-- 19. REFERENCES -->
