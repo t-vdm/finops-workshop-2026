@@ -1112,20 +1112,9 @@ flowchart LR
     </div>
   </section>
 
-  <!-- A0. APPENDIX DIVIDER -->
-  <section class="slide">
-    <div class="demo-slide">
-      <div style="text-align:center">
-        <div class="eyebrow" style="margin-bottom:24px">For deeper questions</div>
-        <h1 class="title"><span class="accent">Appendix</span></h1>
-        <p class="lead" style="margin-top:18px;color:var(--muted)">Schemas, SQL, storage trade-offs.</p>
-      </div>
-    </div>
-  </section>
-
   <!-- A1. FACT + DIM MODEL -->
   <section class="slide">
-    <div class="eyebrow">Appendix · data model</div>
+    <div class="eyebrow">Data model</div>
     <h2 class="headline">Fact + dimensions, concrete</h2>
 
     <div class="grid-2" style="margin-top:8px;align-items:stretch">
@@ -1184,7 +1173,7 @@ flowchart LR
 
   <!-- A2. TAGS PROBLEM -->
   <section class="slide">
-    <div class="eyebrow">Appendix · the Tags column problem</div>
+    <div class="eyebrow">The Tags column problem</div>
     <h2 class="headline">Three ways to handle <code style="font-size:.7em">Tags</code>. Pick a hybrid.</h2>
 
     <div class="grid-3" style="margin-top:8px">
@@ -1229,8 +1218,9 @@ WHERE charge_period_start &gt;= :ingest_window;</pre>
 
   <!-- A3. ROLLUPS -->
   <section class="slide">
-    <div class="eyebrow">Appendix · rollups cookbook</div>
-    <h2 class="headline">Three materialized views you'll definitely build</h2>
+    <div class="eyebrow">Pre-aggregation patterns</div>
+    <h2 class="headline">Common rollups, illustrated in SQL</h2>
+    <p class="lead" style="margin-bottom:14px">SQL shown is illustrative (Postgres flavour). The same patterns apply as Fabric semantic models, ADX <code>summarize</code> queries, or Power BI aggregations — the engine changes, the shape doesn't.</p>
 
     <div class="grid-3" style="margin-top:8px">
       <div class="card">
@@ -1279,12 +1269,12 @@ GROUP BY 1, 2;</pre>
       </div>
     </div>
 
-    <p class="footnote" style="margin-top:18px">Refresh strategy: <strong>incremental</strong> for daily views (append yesterday's partition), <strong>full</strong> for monthly views (small enough to rebuild). Schedule via <code>pg_cron</code>, Fabric pipelines, or your orchestrator of choice.</p>
+    <p class="footnote" style="margin-top:18px">Refresh strategy: <strong>incremental</strong> for daily (append yesterday's partition), <strong>full rebuild</strong> for monthly (small enough). In Fabric/Power BI, this is the same idea expressed as incremental refresh policies; in ADX, as update policies on materialized views.</p>
   </section>
 
   <!-- A4. STORAGE ENGINE MATRIX -->
   <section class="slide">
-    <div class="eyebrow">Appendix · engine choice</div>
+    <div class="eyebrow">Engine choice</div>
     <h2 class="headline">Where to land the data</h2>
 
     <table style="margin-top:8px">
@@ -1348,7 +1338,7 @@ GROUP BY 1, 2;</pre>
 
   <!-- A5. SCHEMA EVOLUTION -->
   <section class="slide">
-    <div class="eyebrow">Appendix · schema evolution</div>
+    <div class="eyebrow">Schema evolution</div>
     <h2 class="headline">FOCUS will keep moving. Plan for it.</h2>
 
     <ul class="clean" style="max-width:1200px;margin-top:8px">
